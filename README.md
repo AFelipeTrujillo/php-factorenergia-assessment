@@ -20,8 +20,7 @@ WHERE c.status = 'active'
 GROUP BY cl.full_name, t.code
 ORDER BY total_kwh DESC;
 ```
-
-**_Notes_**: Use the YEAR function to determine the year based on the reading_date, and GETDATE() to determine the system date.
+> **_Notes_**: Use the YEAR function to determine the year based on the reading_date, and GETDATE() to determine the system date.
 
 2. For each country ('ES' and 'PT'), find the total number of active contracts 
 and the average monthly consumption (kWh) over the last 6 months.
@@ -49,8 +48,7 @@ WHERE c.status = 'active'
 AND cl.country IN ('ES', 'PT')
 GROUP BY cl.country;
 ```
-
-**_Notes_**: I used a subquery to ensure that only contracts with readings were included. Using a LEFT JOIN directly would affect the measurement of the average; it is probable that there are contracts with readings that affect the calculation.
+> **_Notes_**: I used a subquery to ensure that only contracts with readings were included. Using a LEFT JOIN directly would affect the measurement of the average; it is probable that there are contracts with readings that affect the calculation.
 
 3. Find all clients who have at least one contract but have NEVER received an invoice. 
 Return: client name, fiscal_id, and contract count.
@@ -66,5 +64,4 @@ LEFT JOIN invoices i ON c.id = i.contract_id
 WHERE i.id IS NULL
 GROUP BY cl.full_name, cl.fiscal_id;
 ```
-
-**_Notes_**: Basicly is create a LEFT JOIN to invoice table and search for nulls.
+> **_Notes_**: Basicly is create a LEFT JOIN to invoice table and search for nulls.
