@@ -48,7 +48,7 @@ WHERE c.status = 'active'
 AND cl.country IN ('ES', 'PT')
 GROUP BY cl.country;
 ```
-> **_Notes_**: I used a subquery to ensure that only contracts with readings were included. Using a LEFT JOIN directly would affect the measurement of the average; it is probable that there are contracts with readings that affect the calculation.
+> **_Notes_**: I used a subquery to ensure that only contracts with readings were included. Using a LEFT JOIN directly would affect the measurement of the average; it is probable that there are contracts without readings that affect the calculation.
 
 3. Find all clients who have at least one contract but have NEVER received an invoice. 
 Return: client name, fiscal_id, and contract count.
