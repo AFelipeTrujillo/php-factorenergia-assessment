@@ -1,8 +1,8 @@
 # PHP Assessment
 
-## Exercise 1.1
+## Exercise 1.1
 
-a. List all active contracts with their client name, tariff code, and total kWh consumed in the current year. Order by total kWh descending. (Hint: you will need to JOIN multiple tables.)
+1. List all active contracts with their client name, tariff code, and total kWh consumed in the current year. Order by total kWh descending. (Hint: you will need to JOIN multiple tables.)
 
 ```sql
 SELECT 
@@ -23,7 +23,7 @@ ORDER BY total_kwh DESC;
 
 **_Notes_**: Use the YEAR function to determine the year based on the reading_date, and GETDATE() to determine the system date.
 
-b. For each country ('ES' and 'PT'), find the total number of active contracts 
+2. For each country ('ES' and 'PT'), find the total number of active contracts 
 and the average monthly consumption (kWh) over the last 6 months.
 
 ```sql
@@ -52,7 +52,7 @@ GROUP BY cl.country;
 
 **_Notes_**: I used a subquery to ensure that only contracts with readings were included. Using a LEFT JOIN directly would affect the measurement of the average; it is probable that there are contracts with readings that affect the calculation.
 
-c. Find all clients who have at least one contract but have NEVER received an invoice. 
+3. Find all clients who have at least one contract but have NEVER received an invoice. 
 Return: client name, fiscal_id, and contract count.
 
 ```sql
