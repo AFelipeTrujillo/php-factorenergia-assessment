@@ -128,7 +128,7 @@ GROUP BY cl.full_name, cl.fiscal_id;
 ```
 > **_Notes_**: Basicly is create a LEFT JOIN to invoice table and search for nulls.
 
-### Exercise 1.2
+### Exercise 1.2
 
 Design a stored procedure called sp_GenerateInvoice that:
 
@@ -141,9 +141,11 @@ total_amount = (total_kwh * tariff.price_per_kwh) + tariff.fixed_monthly
 - Handles errors: what happens if there are no readings for the period? What if the contract does not exist?
 Use TRY/CATCH.
 
-Link to code...
-Link to code...
-Link to code...
+[Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
+
+[Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
+
+[Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
 
 ### Exercise 1.3
 
