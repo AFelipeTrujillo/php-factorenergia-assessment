@@ -1,6 +1,68 @@
 # PHP Assessment
 
-## Exercise 1.1
+## Model
+
+```mermaid
+erDiagram
+    clients ||--o{ contracts : "has"
+    tariffs ||--o{ contracts : "applied_to"
+    contracts ||--o{ meter_readings : "generates"
+    contracts ||--o{ invoices : "receives"
+
+    clients {
+        int id PK
+        string fiscal_id UK
+        string full_name
+        string email
+        string country
+        datetime2 created_at
+    }
+
+    tariffs {
+        int id PK
+        string code UK
+        string description
+        decimal price_per_kwh
+        decimal fixed_monthly
+        string country
+        bit active
+    }
+
+    contracts {
+        int id PK
+        int client_id FK
+        int tariff_id FK
+        string cups
+        date start_date
+        date end_date
+        string status
+        datetime2 created_at
+    }
+
+    meter_readings {
+        int id PK
+        int contract_id FK
+        date reading_date
+        decimal kwh_consumed
+        string source
+        datetime2 created_at
+    }
+
+    invoices {
+        int id PK
+        int contract_id FK
+        string billing_period
+        decimal total_kwh
+        decimal total_amount
+        string status
+        datetime2 issued_at
+        datetime2 created_at
+    }
+```
+
+## Exercise 1
+
+### Exercise 1.1
 
 1. List all active contracts with their client name, tariff code, and total kWh consumed in the current year. Order by total kWh descending. (Hint: you will need to JOIN multiple tables.)
 
@@ -65,3 +127,30 @@ WHERE i.id IS NULL
 GROUP BY cl.full_name, cl.fiscal_id;
 ```
 > **_Notes_**: Basicly is create a LEFT JOIN to invoice table and search for nulls.
+
+### Exercise 1.2
+
+Design a stored procedure called sp_GenerateInvoice that:
+
+- Receives @contract_id INT and @billing_period VARCHAR(7) (e.g. '2026-02').
+- Checks that the contract is active and no invoice already exists for that period.
+- Calculates the invoice:
+total_kwh = SUM of meter_readings for that contract in that month
+total_amount = (total_kwh * tariff.price_per_kwh) + tariff.fixed_monthly
+- Inserts a new invoice with status 'draft'. Returns the created invoice data.
+- Handles errors: what happens if there are no readings for the period? What if the contract does not exist?
+Use TRY/CATCH.
+
+Link to code...
+Link to code...
+Link to code...
+
+### Exercise 1.3
+
+1. Index on `contracts`
+
+```sql
+CREATE INDEX INDEX_contracts_status_client ON contracts (status, client_id) INCLUDE (tariff_id);
+```
+
+**_Why_**: First, create an index by `status` and `client_id`. In order to reject any other statuses. Finally, find it using the `client_id`. I also suggested returning the `tariff_id`. 
