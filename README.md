@@ -172,3 +172,8 @@ CREATE INDEX IX_meter_readings_contract_date ON meter_readings (contract_id, rea
 ```sql
 CREATE UNIQUE INDEX IX_invoices_contract_period ON invoices (contract_id, billing_period);
 ```
+
+> **_Why_**: Create a unique index between `contract_id` and `billing_period` to avoid creating duplicates. This will prevent the creation of two or more invoices for the same period and contract. 
+>
+
+## Exercise 2
