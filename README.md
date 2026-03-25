@@ -1,6 +1,6 @@
 # PHP Assessment
 
-## Model
+## Model
 
 ```mermaid
 erDiagram
