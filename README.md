@@ -155,7 +155,8 @@ Use TRY/CATCH.
 CREATE INDEX IX_contracts_status_client ON contracts (status, client_id) INCLUDE (tariff_id);
 ```
 
-**_Why_**: First, create an index by `status` and `client_id`. When queries filtering contracts by `status = 'active'` discard the inactive ones automatically. In addtion, I suggest include the `tariff_id` and reduce timing to get the tariff.
+> **_Why_**: First, create an index by `status` and `client_id`. When queries filtering contracts by `status = 'active'` discard the inactive ones (cancelled and pending) automatically. In addtion, I suggest include the `tariff_id` and reduce timing to get the tariff.
+> 
 
 2. Index on `meter_readings`
 
@@ -163,7 +164,8 @@ CREATE INDEX IX_contracts_status_client ON contracts (status, client_id) INCLUDE
 CREATE INDEX IX_meter_readings_contract_date ON meter_readings (contract_id, reading_date) INCLUDE (kwh_consumed);
 ```
 
-**_Why_**: The `meter_readings` table should be critical with thousands or millions of rows. I consider the filter `contrant_id` by `reading_date` to be a recurring query. Creating an index and including kwh_consumed could to make faster the `SUM()` by period.
+> **_Why_**: The `meter_readings` table should be critical with thousands or millions of rows. I consider the filter `contrant_id` by `reading_date` to be a recurring query. Creating an index and including kwh_consumed could to make faster the `SUM()` by period.
+> 
 
 3. Index on `invoices`
 
