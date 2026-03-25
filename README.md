@@ -152,7 +152,21 @@ Use TRY/CATCH.
 1. Index on `contracts`
 
 ```sql
-CREATE INDEX INDEX_contracts_status_client ON contracts (status, client_id) INCLUDE (tariff_id);
+CREATE INDEX IX_contracts_status_client ON contracts (status, client_id) INCLUDE (tariff_id);
 ```
 
-**_Why_**: First, create an index by `status` and `client_id`. In order to reject any other statuses. Finally, find it using the `client_id`. I also suggested returning the `tariff_id`. 
+**_Why_**: First, create an index by `status` and `client_id`. When queries filtering contracts by `status = 'active'` discard the inactive ones automatically. In addtion, I suggest include the `tariff_id` and reduce timing to get the tariff.
+
+2. Index on `meter_readings`
+
+```sql
+CREATE INDEX IX_meter_readings_contract_date ON meter_readings (contract_id, reading_date) INCLUDE (kwh_consumed);
+```
+
+**_Why_**: The `meter_readings` table should be critical with thousands or millions of rows. I consider the filter `contrant_id` by `reading_date` to be a recurring query. Creating an index and including kwh_consumed could to make faster the `SUM()` by period.
+
+3. Index on `invoices`
+
+```sql
+CREATE UNIQUE INDEX IX_invoices_contract_period ON invoices (contract_id, billing_period);
+```
