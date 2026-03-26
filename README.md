@@ -174,7 +174,7 @@ CREATE UNIQUE INDEX IX_invoices_contract_period ON invoices (contract_id, billin
 
 ## Exercise 2
 
-### 2.1 Code Review
+### 2.1 Code Review
 
 In the next code, I marked all issues that considered important. 
 [Link to code review...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part2-php/2_review/InvoiceCalculatorWithCodeReview.php)
@@ -196,7 +196,8 @@ Some points:
 [Link to refactoring code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part2-php/3_refactoring/)
 
 #### The Strategy Pattern applies to Tariffs.
-```mermaind
+
+```mermaid
 classDiagram
     %% Core Entities (Persistence Layer)
 
