@@ -143,10 +143,6 @@ Use TRY/CATCH.
 
 [Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
 
-[Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
-
-[Link to code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part1-sql/exercise_1_2.sql)
-
 ### Exercise 1.3
 
 1. Index on `contracts`
@@ -177,3 +173,78 @@ CREATE UNIQUE INDEX IX_invoices_contract_period ON invoices (contract_id, billin
 >
 
 ## Exercise 2
+
+### 2.1 Code Review
+
+In the next code, I marked all issues that considered important. 
+[Link to code review...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part2-php/2_review/InvoiceCalculatorWithCodeReview.php)
+
+Some points:
+
+* **SQL Injection**: This is the most critical issue. Variables like `$contractId` and `$month` are concatenated directly into the SQL strings. Fix: Use prepare SQL sintax or ORM
+
+* **Errors via echo**: A service class should never use echo (intead of use loggin). This breaks the separation of concerns. Fix: Use Exceptions or return a Response object.
+
+* **Violation of OCP (Open/Closed Principle)**: Every time FactorEnergia adds a new tariff, you must modify the if/elseif block. This makes the class grow indefinitely and increases the risk of introducing bugs in existing tariffs. **Fix**: Create strategies per each tariff (_Strategy Pattern_).
+
+* **Type Hinting**: There is a lack of type-hinting in the return and function parameters. Make the code clearer and more readable.
+
+* **Insert Validation**: After the insert/update, validate that the data has been inserted into the database and use transaction staments.
+
+### 2.2 Refactoring
+
+[Link to refactoring code...](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part2-php/3_refactoring/)
+
+#### The Strategy Pattern applies to Tariffs.
+```mermaind
+classDiagram
+    %% Core Entities (Persistence Layer)
+
+    %% Service Layer (Refactored)
+    class InvoiceCalculator {
+        -ContractRepository contractRepo
+        -MeterReadingRepository readingRepo
+        -TaxService taxService
+        -iterable<TariffStrategyInterface> strategies
+        +calculate(int contractId, string month) float
+        -findStrategy(string code) TariffStrategyInterface
+    }
+
+    %% The Strategy Pattern
+    class TariffStrategyInterface {
+        <<interface>>
+        +supports(string tariffCode) bool
+        +calculate(Contract contract, float totalKwh, string month) float
+    }
+
+    class FixTariffStrategy {
+        +supports(string tariffCode) bool
+        +calculate(Contract contract, float totalKwh, string month) float
+    }
+
+    class IndexedTariffStrategy {
+        -HttpClientInterface energyApiClient
+        +supports(string tariffCode) bool
+        +calculate(Contract contract, float totalKwh, string month) float
+    }
+
+    class FlatRateTariffStrategy {
+        +supports(string tariffCode) bool
+        +calculate(Contract contract, float totalKwh, string month) float
+    }
+
+    %% Relationships
+    InvoiceCalculator "1" ..> "*" TariffStrategyInterface : uses (Dependency Injection)
+
+    TariffStrategyInterface <|.. FixTariffStrategy : implements
+    TariffStrategyInterface <|.. IndexedTariffStrategy : implements
+    TariffStrategyInterface <|.. FlatRateTariffStrategy : implements
+```
+
+#### Unit Test
+
+I consider creating unit tests for:
+
+* Each tariff strategy focuses on the `IndexedTariffStrategy`, which depends on an external service.
+* Ensure the system throws an exception and logs an error if a Contract is not found.
+* Ensure `entityManager->persist()` and `flush()` are called at the end of a successful cycle. PHPUnit can mock the `EntityManager`and validate the execution.
