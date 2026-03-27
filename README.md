@@ -248,3 +248,88 @@ I consider creating unit tests for:
 * Each tariff strategy focuses on the `IndexedTariffStrategy`, which depends on an external service.
 * Ensure the system throws an exception and logs an error if a Contract is not found.
 * Ensure `entityManager->persist()` and `flush()` are called at the end of a successful cycle. PHPUnit can mock the `EntityManager`and validate the execution.
+
+## Exercise 3
+
+### 3.1 Data Model
+
+Define the entity/model for storing the result of each synchronization attempt, using your chosen framework (Doctrine ORM for Symfony or ActiveRecord for Yii2). It should store:
+- The local contract ID
+- The ERSE external ID (if successful)
+- The sync status (pending, success, failed)
+- The response received from ERSE (for debugging)
+- Created and updated timestamps
+
+[Link to Data Model](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part3-api/ErseSyncLog.php)
+
+### 3.2 Serivice Class
+
+Implement a service class (e.g. ErseSyncService) that:
+- Receives a contract ID
+- Loads the contract from the database
+- Transforms the data into the format expected by the ERSE API
+- Sends the HTTP request (use Guzzle, Symfony HttpClient, or Yii2's HTTP client -- your choice)
+- Handles the different responses (201, 400, 409, 500) and updates the sync record accordingly
+
+[Link to Serivice Class](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part3-api/ErseSyncService.php)
+
+### 3.3 Controller
+
+Implement the endpoint POST /api/contracts/sync that:
+- Accepts a JSON payload with: contract_id (int)
+- Validates that the contract exists and belongs to Portugal (country = 'PT')
+- Calls the sync service
+- Returns appropriate HTTP responses (success, not found, already synced, etc.)
+
+[Link to Controller](https://github.com/AFelipeTrujillo/php-factorenergia-assessment/blob/main/part3-api/ContractSyncController.php)
+
+### 3.4 Written Questions
+
+1. How would you prevent the same contract from being synced twice simultaneously (e.g. if someone clicks the button twice quickly)?
+
+To prevent one contract being synced more than once, I suggest using the `Locks` of Symfony. This component lets the service block a specific database resource (e.g a Contract) using and external stogare. Creating a mark in a Text Plain File or Redis, which stops other processes when try to use it.
+
+For example:
+```php
+// Create the lock
+$lock = $this->lockFactory->createLock('erse-sync-' . $contractId);
+
+// If acquire == false, the resource is blocked and stop the processs
+if (!$lock->acquire()) {
+    $this->logger->warning("Sync ignored: Contract {id} is already being processed.", ['id' => $contractId]);
+    return;
+}
+// ...
+
+// Relesase the resource.
+$lock->release();
+
+```
+
+2. If the ERSE API is temporarily down, what would you do with the sync request so it is not lost?
+
+Instead of processing the sync in the HTTP request in one thread of execution, I would use `Symfony Messenger`, for managing queues. The request would be stored as a `Message` in the queue. If the API is down, the worker will automatically use a Retry process to re-process the message later without losing the data. It can use a table from the database with `Symfony Messenger`, or set up to use `Redis` or `RabbitMQ`.
+
+How looks the controller with a `MessageBusInterface`:
+
+```php
+#[Route('/api/contracts')]
+class ContractSyncController extends AbstractController
+{
+    #[Route('/sync', name: 'api_contract_sync', methods: ['POST'])]
+    public function sync(Contract $contract, MessageBusInterface $bus): JsonResponse    // <--- MessageBusInterface
+    {
+        // Use the dispatch function to sync the contract.
+        $bus->dispatch(new SyncContractMessage($contract->getId()));
+
+        return $this->json([
+                'status' => 'processing',
+                'message' => 'Sync is processing for contract ' . $contractId
+            ], Response::HTTP_OK);
+    }
+}
+```
+
+3. Where would you store the ERSE API URL and Bearer token in your framework? Why?
+
+I would store these sensitive values in Environment Variables (.env file) and inject them into the service via Symfony's Parameter. This ensures Security (secrets are not committed to Git thanks to `.gitignore`) and Environment Isolation, allowing us to use different credentials for Development, Staging, and Production without changing a single line of code. Other options is a use and external tools called `Vault` when the team uses lots of microservices. 
