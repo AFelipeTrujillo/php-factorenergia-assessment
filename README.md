@@ -253,7 +253,7 @@ I consider creating unit tests for:
 
 ## Exercise 3
 
-### 3.1 Data Model
+### 3.1 Data Model
 
 Define the entity/model for storing the result of each synchronization attempt, using your chosen framework (Doctrine ORM for Symfony or ActiveRecord for Yii2). It should store:
 - The local contract ID
