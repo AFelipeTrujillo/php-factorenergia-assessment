@@ -389,7 +389,7 @@ To keep the process going, add `try-catch` inside the loop. This means that if a
 
 Two ways, validation on application and database lavel.
 
-Before generating, the code queries the `Invoice` table: `SELECT id FROM invoices WHERE contract_id = :id AND billing_period = :period` If a result is found, the loop skips that contract or getting only contract where `status = active` and no invoice exists for example `billing_period = '2026-02'`
+Before generating, the code queries the `Invoice` table: `SELECT id FROM invoices WHERE contract_id = :id AND billing_period = :period` If a result is found, the loop skips that contract. Also, another alternative is getting only contract where `status = active` and no invoice exists for example `billing_period = '2026-02'`
 
 Also, add a `Unique Constraint` in the database on the columns (contract_id, billing_period). This prevents duplicates even if two processes were somehow triggered at the same time.
 
