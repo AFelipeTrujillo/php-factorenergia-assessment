@@ -287,7 +287,7 @@ Implement the endpoint POST /api/contracts/sync that:
 
 ### 3.4 Written Questions
 
-1. How would you prevent the same contract from being synced twice simultaneously (e.g. if someone clicks the button twice quickly)?
+1. **How would you prevent the same contract from being synced twice simultaneously (e.g. if someone clicks the button twice quickly)?**
 
 To prevent one contract being synced more than once, I suggest using the `Locks` of Symfony. This component lets the service block a specific database resource (e.g a Contract) using and external stogare. Creating a mark in a Text Plain File or Redis, which stops other processes when try to use it.
 
@@ -307,7 +307,7 @@ if (!$lock->acquire()) {
 $lock->release();
 ```
 
-2. If the ERSE API is temporarily down, what would you do with the sync request so it is not lost?
+2. **If the ERSE API is temporarily down, what would you do with the sync request so it is not lost?**
 
 Instead of processing the sync in the HTTP request in one thread of execution, I would use `Symfony Messenger`, for managing queues. The request would be stored as a `Message` in the queue. If the API is down, the worker will automatically use a Retry process to re-process the message later without losing the data. It can use a table from the database with `Symfony Messenger`, or set up to use `Redis` or `RabbitMQ`. If the error message appears again after 5 minutes, the queue will need to pause for five minutes or more before sending new requests.
 
@@ -331,7 +331,7 @@ class ContractSyncController extends AbstractController
 }
 ```
 
-3. Where would you store the ERSE API URL and Bearer token in your framework? Why?
+3. **Where would you store the ERSE API URL and Bearer token in your framework? Why?**
 
 I would store these sensitive values in Environment Variables (.env file) and inject them into the service via Symfony's Parameter. This ensures Security (secrets are not committed to Git thanks to `.gitignore`) and Environment Isolation, allowing us to use different credentials for Development, Staging, and Production without changing a single line of code. Other options is a use and external tools called `Vault` when the team uses lots of microservices. 
 
