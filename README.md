@@ -339,7 +339,7 @@ I would store these sensitive values in Environment Variables (.env file) and in
 
 ### 4.1 Implementation Approach (Symfony)
 
-#### Triggering the Job
+#### 1. Triggering the Job
 
 I prefer to use a `Symfony Command`. This lets you run a process without time limits or memory limits. Then, set up a cron job.
 
@@ -348,7 +348,7 @@ Example:
     00 03 * * * php /path/to/bin/console app:invoices:generate-monthly
 ```
 
-#### High-Level Flow (Step-by-Step)
+#### 2. High-Level Flow (Step-by-Step)
 
 1. **Identify Period**: Calculate the previous month string. (e.g., `2026-02`)
 2. **Contract Fetch**: Get only Contract IDs where: `status = active`and no invoice exists for `billing_period = '2026-02'`
@@ -368,7 +368,7 @@ Example:
 4. **Process & Persist**: Call `InvoiceCalculator` and save the result in db.
 5. **Log and Maling**: Logging is important to report fails or success and send mail.
 
-#### Error Handling (The "Continue on Failure" Strategy)
+#### 3. Error Handling (The "Continue on Failure" Strategy)
 
 To keep the process going, add `try-catch` inside the loop. This means that if an exception is thrown, it will simply be logged instead of being thrown. For example:
 
@@ -385,7 +385,7 @@ To keep the process going, add `try-catch` inside the loop. This means that if a
     }
 ```
 
-#### Preventing Duplicate Invoices
+#### 4. Preventing Duplicate Invoices
 
 Two ways, validation on application and database lavel.
 
@@ -395,13 +395,13 @@ Also, add a `Unique Constraint` in the database on the columns (contract_id, bil
 
 ### 4.2 Scaling Questions
 
-#### If the number of contracts grows to 100,000, the nightly process takes too long. What would you change to make it faster?
+#### 1. If the number of contracts grows to 100,000, the nightly process takes too long. What would you change to make it faster?
 
 I would change from a synchronous loop to an architecture using a message queue (like RabbitMQ). The main command would simply send small tasks to the queue, allowing multiple parallel to process invoices at the same time across different CPU cores or servers, reducing the total time.
 
 In future, if there is a billing increase, the billing process should be moved and separate to a `hexagonal architecture` based on `kubernetes`. This will make the queue manager scale better.
 
-#### You notice that the process sometimes fails at contract #5,000 due to a database timeout. What would you investigate and how would you fix it?
+#### 2. You notice that the process sometimes fails at contract #5,000 due to a database timeout. What would you investigate and how would you fix it?
 
 To find out why there is a problem, check the log and see what happens, and deal with timeouts in the database, I would use batch processing with regular flush and clears. I would call `$entityManager->flush()` and `$entityManager->clear()` every 50 or 100 records to free up memory and close transactions. This would prevent the database connection from hanging or reaching its execution limit. Here is an example from the doctrine webpage:
 
@@ -422,7 +422,7 @@ To find out why there is a problem, check the log and see what happens, and deal
 ```
 [Source](https://www.doctrine-project.org/projects/doctrine-orm/en/2.14/reference/batch-processing.html#iterating-results)
 
-### A colleague suggests running the process during business hours instead of at night. What concerns would you raise?
+#### 3. A colleague suggests running the process during business hours instead of at night. What concerns would you raise?
 
 If you run heavy batch processes during business hours, you might run into problems. These problems could cause the customer website to slow down. Also, if you write to the database a lot during busy times, it can cause `Deadlocks`. This can cause slow response times for users trying to update their own contract details or view reports.
 
