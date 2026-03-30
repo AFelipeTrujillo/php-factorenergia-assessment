@@ -305,12 +305,11 @@ if (!$lock->acquire()) {
 
 // Relesase the resource.
 $lock->release();
-
 ```
 
 2. If the ERSE API is temporarily down, what would you do with the sync request so it is not lost?
 
-Instead of processing the sync in the HTTP request in one thread of execution, I would use `Symfony Messenger`, for managing queues. The request would be stored as a `Message` in the queue. If the API is down, the worker will automatically use a Retry process to re-process the message later without losing the data. It can use a table from the database with `Symfony Messenger`, or set up to use `Redis` or `RabbitMQ`.
+Instead of processing the sync in the HTTP request in one thread of execution, I would use `Symfony Messenger`, for managing queues. The request would be stored as a `Message` in the queue. If the API is down, the worker will automatically use a Retry process to re-process the message later without losing the data. It can use a table from the database with `Symfony Messenger`, or set up to use `Redis` or `RabbitMQ`. If the error message appears again after 5 minutes, the queue will need to pause for five minutes or more before sending new requests.
 
 How looks the controller with a `MessageBusInterface`:
 
@@ -335,3 +334,96 @@ class ContractSyncController extends AbstractController
 3. Where would you store the ERSE API URL and Bearer token in your framework? Why?
 
 I would store these sensitive values in Environment Variables (.env file) and inject them into the service via Symfony's Parameter. This ensures Security (secrets are not committed to Git thanks to `.gitignore`) and Environment Isolation, allowing us to use different credentials for Development, Staging, and Production without changing a single line of code. Other options is a use and external tools called `Vault` when the team uses lots of microservices. 
+
+## Exercise 4
+
+### 4.1 Implementation Approach (Symfony)
+
+#### Triggering the Job
+
+I prefer to use a `Symfony Command`. This lets you run a process without time limits or memory limits. Then, set up a cron job.
+
+Example:
+```bash
+    00 03 * * * php /path/to/bin/console app:invoices:generate-monthly
+```
+
+#### High-Level Flow (Step-by-Step)
+
+1. **Identify Period**: Calculate the previous month string. (e.g., `2026-02`)
+2. **Contract Fetch**: Retrieve only Contract IDs where: `status = active`and no invoice exists for `billing_period = '2026-02'`
+3. **Iterable Result**: Use `toIterable()`(by Doctrine) to process contracts one by one in memory.
+
+```php
+    $q = $this->_em->createQuery('select u from MyProject\Model\User u');
+    foreach ($q->toIterable() as $row) {
+        // do stuff with the data in the row
+        // ...
+        // detach from Doctrine, so that it can be Garbage-Collected immediately
+        $this->_em->detach($row[0]);
+    }
+```
+[source](https://www.doctrine-project.org/projects/doctrine-orm/en/2.14/reference/batch-processing.html#iterating-large-results-for-data-processing)
+
+4. **Process & Persist**: Call `InvoiceCalculator` and save the result in db.
+5. **Log and Maling**: Logging is important to report fails or success and send mail.
+
+#### Error Handling (The "Continue on Failure" Strategy)
+
+To keep the process going, add `try-catch` inside the loop. This means that if an exception is thrown, it will simply be logged instead of being thrown. For example:
+
+```php
+    foreach ($contracts as $contract) {
+        try {
+            $this->invoiceService->calculate($contract, $lastMonth);
+            $successCount++;
+        } catch (\Exception $e) {
+            $this->logger->error("Failed contract {$contract->getId()}: {$e->getMessage()}");
+            $failureCount++;
+            // DO NOT thrown and exception.
+        }
+    }
+```
+
+#### Preventing Duplicate Invoices
+
+Two ways, validation on application and database lavel.
+
+Before generating, the code queries the `Invoice` table: `SELECT id FROM invoices WHERE contract_id = :id AND billing_period = :period` If a result is found, the loop skips that contract.
+
+Also, add a `Unique Constraint` in the database on the columns (contract_id, billing_period). This prevents duplicates even if two processes were somehow triggered at the same time.
+
+### 4.2 Scaling Questions
+
+#### If the number of contracts grows to 100,000, the nightly process takes too long. What would you change to make it faster?
+
+I would change from a synchronous loop to an architecture using a message queue (like RabbitMQ). The main command would simply send small tasks to the queue, allowing multiple parallel to process invoices at the same time across different CPU cores or servers, reducing the total time.
+
+In future, if there is a billing increase, the billing process should be moved and separate to a `hexagonal architecture` based on `kubernetes`. This will make the queue manager scale better.
+
+#### You notice that the process sometimes fails at contract #5,000 due to a database timeout. What would you investigate and how would you fix it?
+
+To find out why there is a problem, check the log and see what happens, and deal with timeouts in the database, I would use batch processing with regular flush and clears. I would call `$entityManager->flush()` and `$entityManager->clear()` every 50 or 100 records to free up memory and close transactions. This would prevent the database connection from hanging or reaching its execution limit. Here is an example from the doctrine webpage:
+
+```php
+    $batchSize = 20;
+    $i = 1;
+    $q = $em->createQuery('select u from MyProject\Model\User u');
+    foreach ($q->toIterable() as $user) {
+        $user->increaseCredit();
+        $user->calculateNewBonuses();
+        ++$i;
+        if (($i % $batchSize) === 0) {
+            $em->flush(); // Executes all updates.
+            $em->clear(); // Detaches all objects from Doctrine!
+        }
+    }
+    $em->flush();
+```
+[Source](https://www.doctrine-project.org/projects/doctrine-orm/en/2.14/reference/batch-processing.html#iterating-results)
+
+### A colleague suggests running the process during business hours instead of at night. What concerns would you raise?
+
+If you run heavy batch processes during business hours, you might run into problems. These problems could cause the customer website to slow down. Also, if you write to the database a lot during busy times, it can cause `Deadlocks`. This can cause slow response times for users trying to update their own contract details or view reports.
+
+Thanks !
